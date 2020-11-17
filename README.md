@@ -25,5 +25,7 @@ yarn package
 # or yarn package-linux
 ```
 
+Once `yarn package` is successful, you can go into the `./release/` folder and double-click on the `dmg` file (on Mac) to install this software.
+
 ## License
 MIT
