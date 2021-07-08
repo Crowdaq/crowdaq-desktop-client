@@ -70,8 +70,10 @@ export const MturkAccountPage: React.FunctionComponent<{}> = (props) => {
     mturkClient.getAccountBalance({}).promise().then(resp => {
       setRemainBalance(resp);
       setLoading(false);
+      setError('');
     }).catch(error => {
-      setError('Something is wrong');
+      setError('Something is wrong with your profile');
+      console.log(error.message);
       setLoading(false);
     });
   }
@@ -123,6 +125,7 @@ export const MturkAccountSelector: React.FunctionComponent<{ onUpdate: (profile:
 
   function handleProfileChange(event: any) {
     const p = awsProfiles.find(profile => profile.name === event.target.value);
+    console.log(p);
     if (p) {
       setAwsProfile(p);
       onUpdate(p, sandbox);
