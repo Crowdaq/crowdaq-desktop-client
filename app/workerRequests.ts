@@ -125,6 +125,8 @@ export function startPublishExam(
     },
     type: 'PublishExamRequest'
   };
+  console.log(req);
+  console.log(count);
   ipcRenderer.send(WorkerRequestChannel, req);
 }
 

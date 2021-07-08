@@ -425,7 +425,7 @@ export function PublishTaskset(props: any) {
 
     <MturkCreateHitConfigurator request={config} onUpdate={setConfig} candidates={quals} />
 
-    <h3>3. Decide how many task to offer</h3>
+    <h3>3. Decide how many tasks to offer</h3>
 
     <FormControl>
       <InputLabel id="comparator-select-label">Count Mode</InputLabel>

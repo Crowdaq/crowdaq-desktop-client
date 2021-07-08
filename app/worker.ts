@@ -105,6 +105,7 @@ async function publishExternalQuestion(
 </ExternalQuestion>
                 `.trim();
   const mturk = getMturkClient(sandbox, awsProfile);
+  console.log('publishExternalQuestion');
   const batchCounts = [];
   while (count > 0) {
     if (count < 10) {
@@ -115,7 +116,7 @@ async function publishExternalQuestion(
       count -= 10;
     }
   }
-
+  console.log(batchCounts);
   let cum = 0;
 
   for (let c of batchCounts) {
@@ -126,12 +127,14 @@ async function publishExternalQuestion(
       Question: externalQuestion,
       MaxAssignments: c
     };
-
     console.log(param);
-
-    const out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError> = await mturk.createHIT(param).promise();
-
-    if (onUpdate) onUpdate(out, cum, count);
+    try{
+      const out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError> = await mturk.createHIT(param).promise();
+      if (onUpdate) onUpdate(out, cum, count);
+    }
+    catch (err){
+      console.log("Error in launching HITs")
+    }
   }
 
 }
@@ -154,7 +157,7 @@ async function PublishExam(req: PublishExamRequest) {
       progress: {
         lastUpdateTime: moment().format(),
         progressCurrent: cum,
-        progressText: `Publishing Hits for url externalUrl (${cum} of ${count})`,
+        progressText: `Publishing Hits for externalUrls (${cum} of ${count})`,
         progressTotal: count,
         status: 'running'
       }, trackerId: req.trackerId
