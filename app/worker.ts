@@ -89,6 +89,10 @@ function getMturkClient(sandbox: boolean, awsProfile: AWSCredProfile): AWS.MTurk
 // const requestQueue: WorkerRequests[] = [];
 const db = new Datastore();
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function publishExternalQuestion(
   awsProfile: AWSCredProfile,
   sandbox: boolean,
@@ -115,25 +119,41 @@ async function publishExternalQuestion(
       count -= 10;
     }
   }
-
   let cum = 0;
 
   for (let c of batchCounts) {
-    cum += c;
-
     const param = {
       ...options,
       Question: externalQuestion,
       MaxAssignments: c
     };
+    let out;
+    const maxAttempts = 5;
+    for (let i = 0; i<maxAttempts; i++){
+      try{
+        if(i>0){
+          console.log(`${i+1}-th attempt...`);
+        }
+        out = await mturk.createHIT(param).promise();
+        break;
+      }
+      catch (err){
+        console.log(err.message);
+        const gran = 500;
+        console.log(`Sleeping for ${gran*Math.pow(2,i)} ms.`);
+        await sleep(gran*Math.pow(2,i));
+      }
 
-    console.log(param);
-
-    const out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError> = await mturk.createHIT(param).promise();
-
-    if (onUpdate) onUpdate(out, cum, count);
+    }
+    
+    if(out){
+      cum += c;
+      if (onUpdate && out.HIT) onUpdate(out, cum, count);
+    }
+    else{
+      console.log(`Launch of hit failed on MTurk after ${maxAttempts} attempts.`);
+    }
   }
-
 }
 
 async function PublishExam(req: PublishExamRequest) {
@@ -147,28 +167,27 @@ async function PublishExam(req: PublishExamRequest) {
   await mkdirp(path.join(dest, 'hits'));
 
   const outs: MTurk.HIT[] = [];
-
+  let hits_successful = 0;
   function onUpdate(out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError>, cum: number, _count: number) {
 
     updateProgress({
       progress: {
         lastUpdateTime: moment().format(),
         progressCurrent: cum,
-        progressText: `Publishing Hits for url externalUrl (${cum} of ${count})`,
+        progressText: `Publishing Hits for externalUrls (${cum} of ${count})`,
         progressTotal: count,
         status: 'running'
       }, trackerId: req.trackerId
     });
+
+    hits_successful = cum;
 
     if (out.HIT) {
       outs.push(out.HIT);
     }
 
   }
-
   await publishExternalQuestion(awsProfile, sandbox, examUrl, config, count, onUpdate);
-
-  console.log(outs);
 
   fs.writeFileSync(path.join(dest, 'hits', `hits-${name}.json`), JSON.stringify(outs));
 
@@ -176,7 +195,7 @@ async function PublishExam(req: PublishExamRequest) {
     progress: {
       lastUpdateTime: moment().format(),
       progressCurrent: 1,
-      progressText: `Hits published.`,
+      progressText: `${hits_successful}/${count} hits successfully published.`,
       progressTotal: 1,
       status: 'finished'
     }, trackerId: req.trackerId
@@ -288,7 +307,7 @@ async function PublishTask(req: PublishTaskRequest) {
     progress: {
       lastUpdateTime: moment().format(),
       progressCurrent: 1,
-      progressText: `Hits published.`,
+      progressText: `${finished}/${total} hits successfully published.`,
       progressTotal: 1,
       status: 'finished'
     }, trackerId: req.trackerId

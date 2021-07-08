@@ -169,7 +169,7 @@ export const MturkAccountSelector: React.FunctionComponent<{ onUpdate: (profile:
       <span>Use Sandbox: </span>
       <GreenSwitch checked={sandbox} onChange={handleSandboxChange} className={classes.switch} />
     </Box>
-
+    
 
   </div>;
 };

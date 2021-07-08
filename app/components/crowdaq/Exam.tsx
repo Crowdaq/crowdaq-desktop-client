@@ -2,7 +2,7 @@ import React from 'react';
 import { CrowdaqUIContext, getAuthHeader } from '../../crowdaq/context';
 import { CrowdaqListing, LinearProgressWithLabel } from './Utils';
 import { useSelector } from 'react-redux';
-import { Button, Card, CardActions, Container, Divider, Grid, TextField } from '@material-ui/core';
+import { Box, Button, Card, CardActions, Container, Divider, Grid, TextField } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useParams } from 'react-router';
 import { Link } from 'react-router-dom';
@@ -420,34 +420,48 @@ export function PublishExamHit(props: any) {
     <h3>1. Select Mturk Profile:</h3>
 
     <MturkAccountSelector onUpdate={updateAccount} />
-
+    <Box>
+      <div>
+        {
+          remainBalance.AvailableBalance === undefined
+            ? <Button onClick={fetchBalance} disabled={awsProfile.name === ''}>Check your balance</Button>
+            : <span>You have ${remainBalance.AvailableBalance} in your mturk account.</span>
+        }
+      </div>
+    </Box>
     <Divider variant="middle" />
+      
 
     <h3>2. Config HITs details:</h3>
 
     <MturkCreateHitConfigurator request={config} onUpdate={setConfig} candidates={quals} />
 
-    <h3>3. Decide how many exam to offer</h3>
+    <h3>3. Decide how many exams to offer</h3>
 
     <TextField
       fullWidth
-      label="How many exam to publish?"
+      label="How many exams to publish?"
       style={{ margin: 8 }}
       margin="normal"
       value={count}
       InputLabelProps={{
         shrink: true
       }}
-      onChange={(event) => setCount(parseInt(event.target.value))}
+      onChange={(event) => {
+          const cnt = parseInt(event.target.value);
+          if(!isNaN(cnt)){
+            setCount(cnt);
+          }
+          else{
+            setCount(1);
+          }
+        }
+      } 
     />
 
     <div>
-      <p>This will cost: $<b>{(parseFloat(config.Reward) * count).toFixed(2)}</b></p>
-      {
-        remainBalance.AvailableBalance === undefined
-          ? <Button onClick={fetchBalance} disabled={awsProfile.name === ''}>Chekc your balance</Button>
-          : <span>And you have ${remainBalance.AvailableBalance} in your mturk account.</span>
-      }
+      <p>This will cost: $<b>{(parseFloat(config.Reward) * count).toFixed(2)}</b> (overhead to MTurk not included)</p>
+      
 
     </div>
 
