@@ -27,5 +27,9 @@ yarn package
 
 Once `yarn package` is successful, you can go into the `./release/` folder and double-click on the `dmg` file (on Mac) to install this software.
 
+## Usage
+
+Most of the UI of this app is self-explanatory. But before launching tasks, make sure you have added your AWS access keys to `~/.aws/credentials`.
+
 ## License
 MIT
