@@ -462,7 +462,15 @@ export function PublishTaskset(props: any) {
       InputLabelProps={{
         shrink: true
       }}
-      onChange={(event) => setCount(parseInt(event.target.value))}
+      onChange={(event) => {
+        const cnt = parseInt(event.target.value);
+        if(!isNaN(cnt)){
+          setCount(cnt);
+        }
+        else{
+          setCount(1);
+        }
+      }}
     />
 
     <div>

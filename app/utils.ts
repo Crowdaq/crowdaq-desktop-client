@@ -323,7 +323,7 @@ export const SandboxCommonQuals: { [key: string]: QualificationRequirement } = {
   'Require Master': {
     ActionsGuarded: 'Accept',
     Comparator: 'Exists',
-    QualificationTypeId: '2F1QJWKUDD8XADTFD2Q0G6UTO95ALH'
+    QualificationTypeId: '2ARFPLSP75KLA8M8DH1HTEQVJT3SY6'
   },
   'Require US': {
     ActionsGuarded: 'Accept',
@@ -339,7 +339,7 @@ export const ProdCommonQuals: { [key: string]: QualificationRequirement } = {
   'Require Master': {
     ActionsGuarded: 'Accept',
     Comparator: 'Exists',
-    QualificationTypeId: '2ARFPLSP75KLA8M8DH1HTEQVJT3SY6'
+    QualificationTypeId: '2F1QJWKUDD8XADTFD2Q0G6UTO95ALH'
   },
   'Require US': {
     ActionsGuarded: 'Accept',
