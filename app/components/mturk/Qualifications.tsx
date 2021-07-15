@@ -335,7 +335,7 @@ export const MTurkQualificationRequirementList: React.FunctionComponent<{
               setIvError('');
             } catch (e) {
               if (event.target.value !== '')
-              setIvError('must be a list of integers separated by comma');
+              setIvError('must be a list of integers separated by comma (e.g., 1, 2)');
             }
 
           }}
@@ -363,7 +363,7 @@ export const MTurkQualificationRequirementList: React.FunctionComponent<{
               setLvError('');
             } catch (e) {
               if (event.target.value !== '')
-              setLvError('Must be json array of Locale values, see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/MTurk.html#createHIT-property');
+              setLvError('Must be json array of Locale values (e.g., [{"Country":"US"}]), see https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/MTurk.html#createHIT-property');
             }
           }}
         />
@@ -372,6 +372,14 @@ export const MTurkQualificationRequirementList: React.FunctionComponent<{
       <Grid item xs={12}>
         <Button onClick={() => {
           if (props.onChange) {
+            console.log(toAdd);
+            if(toAdd.Comparator == 'Exists' || toAdd.Comparator == 'DoesNotExist'){
+              toAdd.IntegerValues = undefined;
+            }
+            if(toAdd.Comparator !== 'EqualTo' && toAdd.Comparator !== 'NotEqualTo' && toAdd.Comparator !== 'In' && toAdd.Comparator !== 'NotIn'){
+              toAdd.LocaleValues = undefined;
+            }
+            console.log(toAdd);
             props.onChange([...requirements, toAdd]);
           }
         }}

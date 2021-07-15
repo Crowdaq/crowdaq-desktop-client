@@ -99,7 +99,7 @@ async function publishExternalQuestion(
   externalUrl: string,
   options: MTurk.CreateHITRequest,
   count: number,
-  onUpdate: (out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError>, cum: number, total: number) => void
+  onUpdate: (out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError> | null, cum: number, total: number, err: string) => void
 ) {
   const externalQuestion = `
 <?xml version="1.0" encoding="UTF-8"?>
@@ -127,32 +127,32 @@ async function publishExternalQuestion(
       Question: externalQuestion,
       MaxAssignments: c
     };
-    let out;
+    let out = null;
     const maxAttempts = 5;
+    let err_msg: string = '';
     for (let i = 0; i<maxAttempts; i++){
       try{
         if(i>0){
           console.log(`${i+1}-th attempt...`);
         }
         out = await mturk.createHIT(param).promise();
+        if(out){
+          err_msg = '';
+          cum += c;
+        }
         break;
       }
       catch (err){
         console.log(err.message);
-        const gran = 500;
+        out = null;
+        err_msg = err.message;
+        const gran = 100;
         console.log(`Sleeping for ${gran*Math.pow(2,i)} ms.`);
         await sleep(gran*Math.pow(2,i));
       }
-
     }
-    
-    if(out){
-      cum += c;
-      if (onUpdate && out.HIT) onUpdate(out, cum, count);
-    }
-    else{
-      console.log(`Launch of hit failed on MTurk after ${maxAttempts} attempts.`);
-    }
+    if (onUpdate) onUpdate(out, cum, count, err_msg);
+    if(!out) console.log(`Launch of hit failed on MTurk after ${maxAttempts} attempts.`);
   }
 }
 
@@ -168,34 +168,44 @@ async function PublishExam(req: PublishExamRequest) {
 
   const outs: MTurk.HIT[] = [];
   let hits_successful = 0;
-  function onUpdate(out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError>, cum: number, _count: number) {
+  let err_msgs:string[] = [];
+  function onUpdate(out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError> | null, cum: number, _count: number, err: string) {
+    let ptext:string = `Publishing Hits for externalUrls (${cum} of ${count}).`;
+
+    hits_successful = cum;
+    if(err_msgs.length<10 && err){
+      err_msgs.push(err);
+    }
+    if (out && out.HIT) {
+      outs.push(out.HIT);
+    }
+    if (err_msgs.length>0){
+      ptext += `\nError messages:\n${err_msgs}`;
+    }
 
     updateProgress({
       progress: {
         lastUpdateTime: moment().format(),
         progressCurrent: cum,
-        progressText: `Publishing Hits for externalUrls (${cum} of ${count})`,
+        progressText: ptext,
         progressTotal: count,
         status: 'running'
       }, trackerId: req.trackerId
     });
 
-    hits_successful = cum;
-
-    if (out.HIT) {
-      outs.push(out.HIT);
-    }
-
   }
   await publishExternalQuestion(awsProfile, sandbox, examUrl, config, count, onUpdate);
 
   fs.writeFileSync(path.join(dest, 'hits', `hits-${name}.json`), JSON.stringify(outs));
-
+  let ptext:string = `${hits_successful}/${count} hits successfully published.`;
+  if (err_msgs.length>0){
+      ptext += `\nError messages:\n${err_msgs}`;
+  }
   updateProgress({
     progress: {
       lastUpdateTime: moment().format(),
       progressCurrent: 1,
-      progressText: `${hits_successful}/${count} hits successfully published.`,
+      progressText: ptext,
       progressTotal: 1,
       status: 'finished'
     }, trackerId: req.trackerId
@@ -279,35 +289,52 @@ async function PublishTask(req: PublishTaskRequest) {
 
   const outs: MTurk.HIT[] = [];
   let finished = 0;
-
-  function onUpdate(out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError>, cum: number, _count: number) {
-    if (out.HIT) {
+  let finished_for_curr_plan = 0;
+  function onUpdate(out: PromiseResult<MTurk.Types.CreateHITResponse, AWSError> | null, cum: number, _count: number, err: string) {
+    if (out && out.HIT) {
       outs.push(out.HIT);
     }
+    if(err_msgs.length<10 && err){
+      err_msgs.push(err);
+    }
+    finished_for_curr_plan = cum;
   }
-
+  let err_msgs:string[] = [];
   for (let plan of plans) {
     const taskUrl = `${taskUrlBase}/${plan.taskId}`;
     await publishExternalQuestion(awsProfile, sandbox, taskUrl, config, plan.count, onUpdate);
-    finished += plan.count;
+    //finished += plan.count;
+    finished += finished_for_curr_plan;
+    finished_for_curr_plan = 0;
+    let ptext:string = `Publishing Hits (${finished} of ${total})`;
+    if (err_msgs.length>0){
+      ptext += `\nError messages:\n${err_msgs}`;
+    }
     updateProgress({
       progress: {
         lastUpdateTime: moment().format(),
         progressCurrent: finished,
-        progressText: `Publishing Hits (${finished} of ${total})`,
+        progressText: ptext,
         progressTotal: total,
         status: 'running'
       }, trackerId: req.trackerId
     });
+    if(err_msgs.length>=10){
+      err_msgs.push("Early stopping due to too many errors.");
+      break;
+    }
   }
 
   fs.writeFileSync(path.join(dest, 'hits', `hits-${name}.json`), JSON.stringify(outs));
-
+  let ptext:string = `${finished}/${total} hits successfully published.`;
+  if (err_msgs.length>0){
+      ptext += `\nError messages:\n${err_msgs}`;
+  }
   updateProgress({
     progress: {
       lastUpdateTime: moment().format(),
       progressCurrent: 1,
-      progressText: `${finished}/${total} hits successfully published.`,
+      progressText: ptext,
       progressTotal: 1,
       status: 'finished'
     }, trackerId: req.trackerId
